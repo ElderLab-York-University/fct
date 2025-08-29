@@ -246,8 +246,11 @@ class APF(Controller):
 
         vector = self.__attract(np.array(target[:2]))
 
-        for obstacle in obstacles:
-            vector += self.__repulse(np.array(obstacle))
+        if obstacles:
+            obstacles = np.array(obstacles)
+            local_obstacles = toLocalFrame(self.pose, obstacles)
+            for obstacle in obstacles[local_obstacles[:, 0] >= 0]:
+                vector += self.__repulse(obstacle)
 
         vector *= self.sensor_range / (1.0 + len(obstacles))
         (dx, dy) = vector
