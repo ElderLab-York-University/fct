@@ -323,13 +323,19 @@ end
 ;; Update the state of the simulated wheelchair convoy.
 to update-convoy [dt convoy-guide]
   ;; If there is no convoy associated to this guide, create it.
-  if not any? [out-link-neighbors] of convoy-guide [
+  let new-convoy? (not any? [out-link-neighbors] of convoy-guide)
+  if new-convoy? [
     create-convoy convoy-guide
   ]
 
   ;; If a collision is detected before the update...
   if collision? convoy-guide [
-    ;; Delete then convoy.
+    ;; If the convoy is not new, update collision counts.
+    if not new-convoy? [
+      update-collision-count convoy-guide
+    ]
+
+    ;; Delete the convoy.
     ask wheelchairs with [convoy-id = [who] of convoy-guide] [
       die
     ]
@@ -346,7 +352,6 @@ to update-convoy [dt convoy-guide]
     ;; This assumes that any guide / wheelchair has at most one follower.
     let follower (one-of [out-link-neighbors] of target)
     if follower = nobody [
-      update-collision-count convoy-guide
       stop
     ]
 
@@ -413,6 +418,7 @@ to-report collision? [convoy-guide]
     let collision-found? false
     ask follower [
       set collision-found? (
+        ((distance target) * map-resolution > max-distance) or
         (any? patches in-radius (collision-threshold / map-resolution) with [pcolor = 0]) or
         (any? other turtles in-radius (collision-threshold / map-resolution))
       )
@@ -429,21 +435,36 @@ end
 
 ;; Update collision counts for the given guide's convoy.
 to update-collision-count [convoy-guide]
-  ask wheelchairs with [convoy-id = [who] of convoy-guide] [
-    if any? patches in-radius (collision-threshold / map-resolution) with [pcolor = 0] [
-      set all-collisions (all-collisions + 1)
-      set obstacle-collisions (obstacle-collisions + 1)
-      ask convoy-guide [
-        set collisions (collisions + 1)
-      ]
+  let target convoy-guide
+  loop [
+    ;; This assumes that any guide / wheelchair has at most one follower.
+    let follower (one-of [out-link-neighbors] of target)
+    if follower = nobody [
+      stop
     ]
 
-    if any? other turtles in-radius (collision-threshold / map-resolution) [
-      set all-collisions (all-collisions + 1)
-      set pedestrian-collisions (pedestrian-collisions + 1)
-      ask convoy-guide [
-        set collisions (collisions + 1)
+    ask follower [
+      ;; It's assumed that wheelchairs will get stuck behind static obstacles.
+      let collided-obstacle? (any? patches in-radius (collision-threshold / map-resolution) with [pcolor = 0])
+      let stuck? ((distance target) * map-resolution > max-distance)
+      if collided-obstacle? or stuck? [
+        set obstacle-collisions (obstacle-collisions + 1)
       ]
+
+      let collided-pedestrian? (any? other turtles in-radius (collision-threshold / map-resolution))
+      if collided-pedestrian? [
+        set pedestrian-collisions (pedestrian-collisions + 1)
+      ]
+
+      if collided-obstacle? or collided-pedestrian? or stuck? [
+        set all-collisions (all-collisions + 1)
+        ask convoy-guide [
+          set collisions (collisions + 1)
+        ]
+      ]
+
+      ;; Set this wheelchair as the search key for the next one.
+      set target self
     ]
   ]
 end
@@ -754,9 +775,9 @@ HORIZONTAL
 
 INPUTBOX
 10
-320
+360
 277
-431
+471
 settings
 separation: 1.0
 1
@@ -764,10 +785,10 @@ separation: 1.0
 String
 
 BUTTON
-172
-320
-227
-353
+173
+360
+228
+393
 Reset
 reset-settings
 NIL
@@ -797,6 +818,21 @@ NIL
 NIL
 1
 
+SLIDER
+10
+320
+196
+353
+max-distance
+max-distance
+1
+10
+5.0
+1
+1
+m
+HORIZONTAL
+
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -819,7 +855,7 @@ The identity and location of each wheelchair's leader, the occupancy status of e
 
 ## HOW IT WORKS
 
-Agents in the FTC model come in three categories:
+Agents in the FCT model come in three categories:
 
 * Pedestrians (blue arrows): these are people moving in random trajectories across the environment, who may get in the way of the convoy.
 * The Guide (red arrow): this is a simulated person taking the role of the guide of a wheelchair convoy;
@@ -891,7 +927,7 @@ Instead of one convoy at a time, multiple convoys could be simultaneously simula
 
 The model uses anonymous functions to dynamically bind the leader-following method during model setup. This is more efficient than checking the value of the `method` widget at every iteration, but has the side effect that the method cannot be changed while the model is running. In practice this shouldn't be much of a problem, since for testing purposes it makes little sense to change algorithms in the middle of a session.
 
-Access to SQLite database files is implemented through the Python [sqlite3](https://docs.python.org/3/library/sqlite3.html) package and integrated to the FTC model through the [Py extension](https://ccl.northwestern.edu/netlogo/docs/py.html). Both the extension and a Python runtime must be installed for the model to work.
+Access to SQLite database files is implemented through the Python [sqlite3](https://docs.python.org/3/library/sqlite3.html) package and integrated to the FCT model through the [Py extension](https://ccl.northwestern.edu/netlogo/docs/py.html). Both the extension and a Python runtime must be installed for the model to work.
 
 ## RELATED MODELS
 
