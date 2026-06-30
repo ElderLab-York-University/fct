@@ -126,6 +126,8 @@ class Controller:
         '''
         self.sensor_range = settings.get('sensor_range', 1.0)
         self.separation = settings.get('separation', 1.0)
+        self.linear_max_speed = settings.get('linear_max_speed', 3.0)
+        self.angular_max_speed = settings.get('angular_max_speed', 3.0)
 
         (x, y, o) = target[:3]
 
@@ -182,6 +184,37 @@ class Controller:
             self.w
         )
 
+    def _set_speeds(self, speeds):
+        r'''Set linear and angular in a single operation.
+
+            Ensure speed limits.
+        '''
+        (v, w) = speeds
+        if v < 0.0:
+            self.v = 0.0
+            self.w = 0.0
+            return
+
+        # If linear speed is above limit, set it to limit
+        # and reduce angular speed proportionally.
+        max_v = self.linear_max_speed
+        if v > max_v:
+            w *= max_v / v
+            v = max_v
+
+        # If angular speed is above limit, set it to limit and reduce linear speed
+        # proportionally. This is checked for even if angular speed was already reduced in
+        # the previous step, since that may not have been enough to clear the threshold.
+        max_w = self.angular_max_speed
+        if abs(w) > max_w:
+            v *= abs(max_w / w)
+            w = copysign(max_w, w)
+
+        self.v = v
+        self.w = w
+
+    # Create a write-only property.
+    speeds = property(None, _set_speeds)
 
 class Naive(Controller):
     r'''A naive controller with no obstacle avoidance capabilities.
@@ -209,8 +242,7 @@ class Naive(Controller):
 
         v = distance(a, b) / dt
 
-        self.v = v
-        self.w = w
+        self.speeds = (v, w)
 
 
 class APF(Controller):
@@ -255,6 +287,8 @@ class APF(Controller):
         vector *= self.sensor_range / (1.0 + len(obstacles))
         (dx, dy) = vector
 
+        # Linear speed will always be positive, since its computed from two positive
+        # factors, distance from the target point and time delta.
         a = np.array([self.x, self.y])
         b = np.array([self.x + dx, self.y + dy])
         v = distance(a, b) / dt
@@ -262,8 +296,7 @@ class APF(Controller):
         o = atan2(dy, dx)
         w = (o - self.o) / dt
 
-        self.v = v
-        self.w = w
+        self.speeds = (v, w)
 
 
 class ProximityMap:
@@ -385,11 +418,9 @@ class MRFC(Controller):
 
         self.__distance_gain = settings.get('distance_gain', 0.8)
         self.__target_closest = self.separation
-        self.__linear_max_speed = settings.get('linear_max_speed', 3.0)
-        self.__angular_max_speed = settings.get('angular_max_speed', 3.0)
 
         target_distant = settings.get('target_distant', 1.5)
-        self.__linear_gain = (target_distant - self.__target_closest) / self.__linear_max_speed
+        self.__linear_gain = (target_distant - self.__target_closest) / self.linear_max_speed
         self.__linear_bias = self.__target_closest
 
         self.__track = list()
@@ -478,13 +509,13 @@ class MRFC(Controller):
                 return
 
         k = self.__distance_gain
-        max_w = self.__angular_max_speed
+        max_w = self.angular_max_speed
 
         v_target = target[3]
         d_target = distance(position, target_position)
 
         d_follow = self.__linear_bias + self.__linear_gain * v_target
-        v_follow = truncate(v_target + k * (d_target - d_follow), 0.0, self.__linear_max_speed)
+        v_follow = truncate(v_target + k * (d_target - d_follow), 0.0, self.linear_max_speed)
         w_follow = v_follow * self.__curvature
 
         if abs(w_follow) > max_w:
