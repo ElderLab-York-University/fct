@@ -1,0 +1,3 @@
+[submodule "bin/docker"]
+	path = bin/docker
+	url = git@github.com:ElderLab-York-University/docker_scripts.git
