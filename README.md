@@ -59,8 +59,10 @@ On the bottom-left corner there are widgets to configure general method settings
 
 Finally, on the top-right corner there are the `setup` and `go` buttons to control the execution of the model, along with some visualization widgets:
 
-* `Total Collisions (all guides)` shows the total number of collisions across all guide tracks in the current session. This helps give a general overview of the performance of different algorithms;
-* `Pedestrians (per guide)` and `Collisions (per guide)` respectively plot the number of pedestrians present and the accumulated number of collisions as a function of time. In contrast to the `Total Collisions` monitor, these reset each time a new guide track is loaded. Collisions are plotted by total number (black) as well as collisions with pedestrians (red) and static obstacles (blue).
+* `Guide #` and `Guide ID` show the guide count for the current session and the ID of the current guide respectively;
+* `Obstacle Collisions` shows the total number of collisions to static obstacles across all guide tracks in the current session;
+* `Pedestrian Collisions` shows the total number of collisions to pedestrians across all guide tracks in the current session;
+* `Total Collisions` shows the sum of the above two numbers.
 
 ## Notes
 

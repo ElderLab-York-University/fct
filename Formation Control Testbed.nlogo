@@ -39,6 +39,9 @@ globals [
   ;; ID of the guide in the current track file.
   guide-id
 
+  ;; Number of guides instantiated up to now.
+  guide-count
+
   ;; Simulation clock, stores the current global timestamp.
   clock
 
@@ -59,13 +62,13 @@ globals [
   map-x0
   map-y0
 
-  ;; Number of per-guide obstacle / wheelchair collisions.
+  ;; Number of obstacle / wheelchair collisions.
   obstacle-collisions
 
-  ;; Number of per-guide pedestrian / wheelchair collisions.
+  ;; Number of pedestrian / wheelchair collisions.
   pedestrian-collisions
 
-  ;; Total collisions across all guides.
+  ;; Total number of collisions.
   all-collisions
 ]
 
@@ -197,6 +200,9 @@ to setup
   import-pcolors path-map
 
   set clock false
+  set guide-count 0
+  set obstacle-collisions 0
+  set pedestrian-collisions 0
   set all-collisions 0
 
   reset-ticks
@@ -242,8 +248,6 @@ to iterate
     ifelse clock = false [
       set t_0 now
       set t_passed 0.0
-      set obstacle-collisions 0
-      set pedestrian-collisions 0
       clear-all-plots
       clear-drawing
     ] [
@@ -279,6 +283,7 @@ to iterate-guide [row]
   let convoy-guide (one-of guides with [id = guide-id])
   ifelse convoy-guide = nobody [
     create-guides 1 [
+      set guide-count (guide-count + 1)
       set convoy-guide self
       set id guide-id
       set color red
@@ -569,9 +574,9 @@ end
 @#$#@#$#@
 GRAPHICS-WINDOW
 0
-10
+12
 1409
-620
+622
 -1
 -1
 1.0
@@ -595,9 +600,9 @@ ticks
 30.0
 
 BUTTON
-755
+670
 30
-826
+741
 66
 NIL
 setup
@@ -612,9 +617,9 @@ NIL
 1
 
 BUTTON
-830
+745
 30
-896
+811
 66
 NIL
 go
@@ -627,24 +632,6 @@ NIL
 NIL
 NIL
 1
-
-PLOT
-905
-30
-1232
-150
-Pedestrians (per guide)
-Time (s)
-Count
-0.0
-60.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 60.0 0 -16777216 true "" "plotxy t_passed count pedestrians\nif t_passed >= 60.0 [\n  ; Scroll the range of the plot so only the\n  ; last 1 hour worth of points is visible.\n  set-plot-x-range precision (t_passed - 60.0) 2 precision t_passed 2\n]"
 
 SLIDER
 10
@@ -675,26 +662,6 @@ collision-threshold
 1
 m
 HORIZONTAL
-
-PLOT
-906
-156
-1232
-322
-Collisions (per guide)
-Time (s)
-Collisions
-0.0
-60.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"obstacles" 60.0 0 -13345367 true "" "plotxy t_passed obstacle-collisions\nif t_passed >= 60.0 [\n  ; Scroll the range of the plot so only the\n  ; last 1 minute worth of points is visible.\n  set-plot-x-range precision (t_passed - 60.0) 2 precision t_passed 2\n]"
-"pedestrians" 60.0 0 -2674135 true "" "plotxy t_passed pedestrian-collisions\nif t_passed >= 60.0 [\n  ; Scroll the range of the plot so only the\n  ; last 1 minute worth of points is visible.\n  set-plot-x-range precision (t_passed - 60.0) 2 precision t_passed 2\n]"
-"total" 1.0 0 -16777216 true "" "plotxy t_passed (obstacle-collisions + pedestrian-collisions)\nif t_passed >= 60.0 [\n  ; Scroll the range of the plot so only the\n  ; last 1 minute worth of points is visible.\n  set-plot-x-range precision (t_passed - 60.0) 2 precision t_passed 2\n]"
 
 SLIDER
 10
@@ -733,11 +700,11 @@ all-tracks?
 -1000
 
 MONITOR
-717
-129
-897
-174
-Total Collisions (all guides)
+815
+180
+960
+225
+Total Collisions
 all-collisions
 17
 1
@@ -802,9 +769,9 @@ NIL
 1
 
 BUTTON
-820
+735
 70
-897
+812
 103
 NIL
 iterate
@@ -832,6 +799,50 @@ max-distance
 1
 m
 HORIZONTAL
+
+MONITOR
+880
+30
+960
+75
+Guide ID
+guide-id
+17
+1
+11
+
+MONITOR
+815
+80
+960
+126
+Obstacle Collisions
+obstacle-collisions
+17
+1
+11
+
+MONITOR
+815
+130
+960
+176
+Pedestrian Collisions
+pedestrian-collisions
+17
+1
+11
+
+MONITOR
+815
+30
+877
+75
+Guide #
+guide-count
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?

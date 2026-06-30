@@ -171,7 +171,7 @@ class Datasets:
     def enqueue(self, path):
         r'''Enqueue the datasets matching the given search path.
         '''
-        self.queue.extend(Path(path).glob('atc-*.db'))
+        self.queue.extend(sorted(Path(path).glob('atc-*.db')))
 
     def open(self, path):
         r'''Open the given database.
