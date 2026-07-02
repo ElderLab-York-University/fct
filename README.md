@@ -59,8 +59,9 @@ On the bottom-left corner there are widgets to configure general method settings
 
 Finally, on the top-right corner there are the `setup` and `go` buttons to control the execution of the model, along with some visualization widgets:
 
+* `Database ID` shows the ID of the current track database;
 * `Guide #` and `Guide ID` show the guide count for the current session and the ID of the current guide respectively;
-* `Obstacle Collisions` shows the total number of collisions to static obstacles across all guide tracks in the current session;
+* `Obstacle Collisions / Obstructions` shows the total number of collisions to static obstacles / cases where the convoy was stuck behind an obstacle across all guide tracks in the current session;
 * `Pedestrian Collisions` shows the total number of collisions to pedestrians across all guide tracks in the current session;
 * `Total Collisions` shows the sum of the above two numbers.
 

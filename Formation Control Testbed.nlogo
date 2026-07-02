@@ -36,6 +36,9 @@ extensions [
 ]
 
 globals [
+  ;; ID of the current database.
+  database-id
+
   ;; ID of the guide in the current track file.
   guide-id
 
@@ -65,11 +68,14 @@ globals [
   ;; Number of obstacle / wheelchair collisions.
   obstacle-collisions
 
+  ;; Number of times the convoy got stuck behind an obstacle.
+  obstacle-obstructions
+
   ;; Number of pedestrian / wheelchair collisions.
   pedestrian-collisions
 
-  ;; Total number of collisions.
-  all-collisions
+  ;; Total number of interventions.
+  all-interventions
 ]
 
 breed [pedestrians pedestrian]
@@ -92,8 +98,8 @@ guides-own [
   ;; Guide's track ID.
   id
 
-  ;; Number of collisions reported during this guide's trip.
-  collisions
+  ;; Number of interventions reported during this guide's trip.
+  interventions
 
   ;; Guide position in the map coordinate frame, in meters.
   x-coordinate
@@ -202,8 +208,9 @@ to setup
   set clock false
   set guide-count 0
   set obstacle-collisions 0
+  set obstacle-obstructions 0
   set pedestrian-collisions 0
-  set all-collisions 0
+  set all-interventions 0
 
   reset-ticks
 end
@@ -226,7 +233,7 @@ to iterate
     if row = nobody [
       ;; Record the guide's collision count.
       ask guides [
-        py:set "record" (list id collisions)
+        py:set "record" (list id interventions)
         py:run "datasets.recordCollisions(*record)"
       ]
 
@@ -242,6 +249,9 @@ to iterate
 
       stop
     ]
+
+    ;; Update the database name.
+    set database-id (py:runresult "datasets.dataset.name")
 
     ;; Reset the environment for a new guide.
     let now (item 0 row)
@@ -412,7 +422,6 @@ end
 ;; Report if any of the convoy wheelchairs have collided with an obstacle or pedestrian.
 to-report collision? [convoy-guide]
   let target convoy-guide
-
   loop [
     ;; This assumes that any guide / wheelchair has at most one follower.
     let follower (one-of [out-link-neighbors] of target)
@@ -420,22 +429,44 @@ to-report collision? [convoy-guide]
       report false
     ]
 
-    let collision-found? false
-    ask follower [
-      set collision-found? (
-        ((distance target) * map-resolution > max-distance) or
-        (any? patches in-radius (collision-threshold / map-resolution) with [pcolor = 0]) or
-        (any? other turtles in-radius (collision-threshold / map-resolution))
-      )
-
-      ;; Set this wheelchair as the search key for the next one.
-      set target self
-    ]
-
-    if collision-found? [
+    if
+      (obstacle-collision? follower) or
+      (obstacle-obstruction? follower target) or
+      (pedestrian-collision? follower)
+    [
       report true
     ]
+
+    ;; Set this wheelchair as the search key for the next one.
+    set target follower
   ]
+end
+
+;; Report if the wheelchair has collided with a pedestrian.
+to-report obstacle-collision? [a-wheelchair]
+  report [any? patches in-radius (collision-threshold / map-resolution) with [pcolor = 0]] of a-wheelchair
+end
+
+;; Report if the wheelchair is stuck behind an obstacle.
+to-report obstacle-obstruction? [a-wheelchair target]
+  let stuck? false
+  ask a-wheelchair [
+    set stuck? ((distance target) * map-resolution > max-distance)
+  ]
+
+  report stuck?
+end
+
+;; Report if the wheelchair has collided with a pedestrian.
+to-report pedestrian-collision? [a-wheelchair]
+  let collided? false
+  ask a-wheelchair [
+    if linear-speed > 0.0 [
+      set collided? (any? other turtles in-radius (collision-threshold / map-resolution))
+    ]
+  ]
+
+  report collided?
 end
 
 ;; Update collision counts for the given guide's convoy.
@@ -448,29 +479,30 @@ to update-collision-count [convoy-guide]
       stop
     ]
 
-    ask follower [
-      ;; It's assumed that wheelchairs will get stuck behind static obstacles.
-      let collided-obstacle? (any? patches in-radius (collision-threshold / map-resolution) with [pcolor = 0])
-      let stuck? ((distance target) * map-resolution > max-distance)
-      if collided-obstacle? or stuck? [
-        set obstacle-collisions (obstacle-collisions + 1)
-      ]
-
-      let collided-pedestrian? (any? other turtles in-radius (collision-threshold / map-resolution))
-      if collided-pedestrian? [
-        set pedestrian-collisions (pedestrian-collisions + 1)
-      ]
-
-      if collided-obstacle? or collided-pedestrian? or stuck? [
-        set all-collisions (all-collisions + 1)
-        ask convoy-guide [
-          set collisions (collisions + 1)
-        ]
-      ]
-
-      ;; Set this wheelchair as the search key for the next one.
-      set target self
+    let collided-obstacle? (obstacle-collision? follower)
+    if collided-obstacle? [
+      set obstacle-collisions (obstacle-collisions + 1)
     ]
+
+    let stuck? (obstacle-obstruction? follower target)
+    if stuck? [
+      set obstacle-obstructions (obstacle-obstructions + 1)
+    ]
+
+    let collided-pedestrian? (pedestrian-collision? follower)
+    if collided-pedestrian? [
+      set pedestrian-collisions (pedestrian-collisions + 1)
+    ]
+
+    if collided-obstacle? or stuck? or collided-pedestrian? [
+      set all-interventions (all-interventions + 1)
+      ask convoy-guide [
+        set interventions (interventions + 1)
+      ]
+    ]
+
+    ;; Set this wheelchair as the search key for the next one.
+    set target follower
   ]
 end
 
@@ -701,11 +733,11 @@ all-tracks?
 
 MONITOR
 815
-180
+230
 960
-225
-Total Collisions
-all-collisions
+275
+Total Interventions
+all-interventions
 17
 1
 11
@@ -802,9 +834,9 @@ HORIZONTAL
 
 MONITOR
 880
-30
+80
 960
-75
+125
 Guide ID
 guide-id
 17
@@ -813,9 +845,9 @@ guide-id
 
 MONITOR
 815
-80
-960
-126
+130
+930
+175
 Obstacle Collisions
 obstacle-collisions
 17
@@ -824,9 +856,9 @@ obstacle-collisions
 
 MONITOR
 815
-130
+180
 960
-176
+225
 Pedestrian Collisions
 pedestrian-collisions
 17
@@ -835,11 +867,33 @@ pedestrian-collisions
 
 MONITOR
 815
-30
+80
 877
-75
+125
 Guide #
 guide-count
+17
+1
+11
+
+MONITOR
+815
+30
+960
+75
+Database ID
+database-id
+17
+1
+11
+
+MONITOR
+930
+130
+1020
+175
+/ Obstructions
+obstacle-obstructions
 17
 1
 11
@@ -891,22 +945,24 @@ On the top-left corner of the interface there are widgets for controlling basic 
 
 * `all-tracks?` indicates whether all SQLite database files will be played in sequence or a single one selected for playing --- in the latter case a file opening dialog will be shown for selecting the file;
 * `method` specifies the leader-following algorithm used by the wheelchairs;
-* `wheelchair-count` determines the number of simulated wheelchairs in the convoy.
+* `wheelchair-count` determines the number of simulated wheelchairs in the convoy;
 * `min-reach` specifies the shortest a track can be in reach to be selected as a guide;
 * `max-reach` specifies the longest a track can be in reach to be selected as a guide.
 
-On the bottom-left corner there are widgets to configure the `APF` leader-following algorithm (these are all ignored when the `naive` algorithm is selected):
+On the bottom-left corner there are widgets to configure general method settings (these are all ignored when the `naive` algorithm is selected):
 
 * `sensor-range` determines the farthest distance at which pedestrians and occupied cells are still considered for avoidance;
 * `collision-threshold` is the distance under which an obstacle is considered to have collided with a wheelchair;
-* `attraction-gain` controls how strongly each wheelchair is pulled towards its leader;
-* `repulsion-gain` controls how strongly each wheelchair is pushed away from obstacles.
+* `max-distance` determines the maximum distance between convoy elements before the convoy is assumed to be stuck, which is treated as a collision;
+* `settings` is a method-dependant set of configurations — after selecting a method and clicking `setup`, click `Reset` to load default values, then `Change` after making any modifications.
 
-Finally, on the top-right corner there are the `Setup` and `Go` buttons to control the execution of the model, along with some visualization widgets:
+Finally, on the top-right corner there are the `setup` and `go` buttons to control the execution of the model, along with some visualization widgets:
 
-* `Guide ID` displays the ID of the current guide --- this is useful to know which file to replay in case of a specially tricky tracks that requires its own tuning;
-* `Total Collisions (all guides)` shows the total number of collisions across all guide tracks in the current session. This helps give a general overview of the performance of different algorithms;
-* `Pedestrians (per guide)` and `Collisions (per guide)` respectively plot the number of pedestrians present and the accumulated number of collisions as a function of time. In contrast to the `Total Collisions` monitor, these reset each time a new guide track is loaded. Collisions are plotted by total number (black) as well as collisions with pedestrians (red) and static obstacles (blue).
+* `Database ID` shows the ID of the current track database;
+* `Guide #` and `Guide ID` show the guide count for the current session and the ID of the current guide respectively;
+* `Obstacle Collisions / Obstructions` shows the total number of collisions to static obstacles / cases where the convoy was stuck behind an obstacle across all guide tracks in the current session;
+* `Pedestrian Collisions` shows the total number of collisions to pedestrians across all guide tracks in the current session;
+* `Total Collisions` shows the sum of the above two numbers.
 
 ## THINGS TO NOTICE
 
