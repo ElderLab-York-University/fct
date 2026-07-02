@@ -76,4 +76,4 @@ export PATH="$PATH:$HOME/.local/bin"
 export PS1='(fct) [\u@\h:\W]\$ '
 
 # Change into repository folder.
-cd "$HOME/formation_control_testbed"
+cd "$HOME/fct"
