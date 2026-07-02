@@ -1,5 +1,7 @@
 # Formation Control Testbed
 
+![FCT UI](doc/images/ui.jpg)
+
 [AirChair](https://elderlab-york-university.github.io/airchair/) is a semi-autonomous human transportation system composed of multiple wheelchairs operating as a convoy. The first wheelchair follows an on-foot human guide, the second wheelchair follows the first, and so on. Each wheelchair independently tracks its target and performs motion planning to follow along while steering clear of obstacles.
 
 The AirChair motion planner, dubbed Mobile Robot Following Controller (MRFC), computes linear and angular speeds based on:
@@ -64,6 +66,21 @@ Finally, on the top-right corner there are the `setup` and `go` buttons to contr
 * `Obstacle Collisions / Obstructions` shows the total number of collisions to static obstacles / cases where the convoy was stuck behind an obstacle across all guide tracks in the current session;
 * `Pedestrian Collisions` shows the total number of collisions to pedestrians across all guide tracks in the current session;
 * `Total Collisions` shows the sum of the above two numbers.
+
+## Demos
+
+[Naive Algorithm](https://youtu.be/XEGF2n4J44I?si=d9jfh84FwjBEZ4ok)
+<iframe width="560" height="315" src="https://www.youtube.com/embed/XEGF2n4J44I?si=d9jfh84FwjBEZ4ok" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+<br><br>
+
+[Artificial Potential Fields (APF) Algorithm](https://youtu.be/GN2tJMTvvHE)
+<iframe width="560" height="315" src="https://www.youtube.com/embed/GN2tJMTvvHE?si=64CXAjElxIpQxHQs" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+<br><br>
+
+[Artificial Potential Fields (MRFC) Algorithm](https://youtu.be/-6nqAGmrFQ0)
+<iframe width="560" height="315" src="https://www.youtube.com/embed/-6nqAGmrFQ0?si=bfB3STyI8qxmNqkD" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ## Notes
 
